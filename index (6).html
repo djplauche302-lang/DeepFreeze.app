@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Deep Freeze — know what's in the freezer</title>
+<meta name="description" content="A freezer inventory that lives on your phone. No subscription, no ads. One payment, and it's yours.">
+<meta name="theme-color" content="#0a1929">
+<link rel="canonical" href="https://deepfreeze.app/">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://deepfreeze.app/">
+<meta property="og:site_name" content="Deep Freeze">
+<meta property="og:title" content="Know what's in the deep freeze.">
+<meta property="og:description" content="A freezer inventory that lives on your phone. $15 once, no subscription, no ads. Designed and built in Texas.">
+<meta property="og:image" content="https://deepfreeze.app/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="628">
+<meta property="og:image:alt" content="Deep Freeze running on a phone, showing a garage freezer inventory.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Know what's in the deep freeze.">
+<meta name="twitter:description" content="A freezer inventory that lives on your phone. $15 once, no subscription, no ads.">
+<meta name="twitter:image" content="https://deepfreeze.app/og.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,900&family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ==========================================================
+   CONFIG
+   1. FORM_ENDPOINT — set it near the bottom of the script,
+      or the form silently captures nothing.
+   2. Ad variants:  ?v=bulk  (default)   ?v=hunter
+   ========================================================== */
+:root{
+  --deep:#0a1929;
+  --deep2:#0d2438;
+  --card:#103048;
+  --card-hi:#14405e;
+  --line:#1d4865;
+  --frost:#e8f4f8;
+  --ice:#a8d8ea;
+  --ice-deep:#5fa8d3;
+  --muted:#7fa8c4;
+  --warn:#ff9b54;
+  --warn-deep:#ff6b35;
+  --danger:#ff4d6d;
+  --green:#5fd6a0;
+
+  --display:'Fraunces',Georgia,serif;
+  --body:'Archivo',system-ui,sans-serif;
+  --wrap:1100px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{background:var(--deep);-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{
+  font-family:var(--body);
+  background:var(--deep);
+  color:var(--frost);
+  font-size:17px;line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+img{max-width:100%;display:block}
+.wrap{max-width:var(--wrap);margin:0 auto;padding:0 22px}
+
+/* fixed cold backdrop — one element, never repaints on scroll */
+.icebg{
+  position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(ellipse 120% 70% at 50% -10%, rgba(168,216,234,.16), transparent 55%),
+    radial-gradient(circle at 88% 18%, rgba(255,255,255,.05), transparent 30%),
+    linear-gradient(170deg,#123350 0%,#0e2942 45%,#0a1929 100%);
+  transform:translateZ(0);
+}
+
+/* ---------- type ---------- */
+h1,h2,h3{font-family:var(--display);font-weight:900;letter-spacing:-.015em}
+/* Fraunces 900 has a deep g/y descender AND a tall f ascender, so a g sitting
+   above an f needs real clearance. 1.2 on the big display sizes. */
+h1{font-size:clamp(36px,5.6vw,62px);line-height:1.2}
+h2{font-size:clamp(27px,3.6vw,40px);line-height:1.16}
+h3{font-size:19px;font-weight:600;letter-spacing:-.01em;line-height:1.25}
+.eyebrow{
+  font-family:var(--body);font-size:11.5px;font-weight:700;
+  letter-spacing:.18em;text-transform:uppercase;color:var(--ice-deep);
+}
+.lede{font-size:clamp(16.5px,1.5vw,19px);color:var(--muted);max-width:46ch}
+
+/* ---------- bar ---------- */
+.bar{border-bottom:1px solid var(--line)}
+.bar .wrap{display:flex;align-items:center;justify-content:space-between;height:62px;gap:14px}
+.logo{font-family:var(--display);font-weight:900;font-size:19px;letter-spacing:-.02em;
+  background:linear-gradient(180deg,var(--frost),var(--ice));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.tag{font-size:13px;color:var(--muted)}
+.tag b{color:var(--frost);font-weight:600}
+
+/* ---------- hero ---------- */
+.hero{padding:clamp(38px,6vw,74px) 0 clamp(34px,5vw,60px)}
+.hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:clamp(28px,5vw,60px);align-items:center}
+.hero .lede{margin-bottom:0}
+.hero h1{margin:16px 0 0;max-width:14ch;
+  background:linear-gradient(180deg,var(--frost) 30%,var(--ice));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.hero h1 em{font-style:normal;-webkit-text-fill-color:var(--warn)}
+.hero .lede{margin-top:18px}
+
+/* phone frame */
+/* Frame shrink-wraps the screenshot. The image is bounded by BOTH a max
+   height and a max width, so it scales to fit and keeps its aspect ratio —
+   no cropping, no squashing, and the hero can't grow taller than the screen. */
+.phone{
+  width:fit-content;max-width:100%;margin:0 auto;
+  border:9px solid #060f18;border-radius:38px;
+  box-shadow:0 26px 60px rgba(0,0,0,.55), 0 0 0 1px var(--line);
+  overflow:hidden;background:#060f18;
+}
+.phone img{
+  display:block;border-radius:29px;
+  width:auto;height:auto;
+  max-width:100%;
+  max-height:min(600px, 72vh);
+}
+.shots .phone img{max-height:min(520px, 62vh)}
+
+/* ---------- form ---------- */
+.capture{margin-top:26px;max-width:460px}
+.field-row{display:flex;gap:9px;flex-wrap:wrap}
+.field-row input{
+  flex:1 1 210px;min-width:0;
+  font-family:var(--body);font-size:16px;padding:14px 15px;
+  border:1px solid var(--line);border-radius:13px;
+  background:rgba(8,28,44,.7);color:var(--frost);
+}
+.field-row input::placeholder{color:#5b7f99}
+.btn{
+  font-family:var(--body);font-weight:700;font-size:16px;
+  padding:14px 24px;border:0;border-radius:13px;cursor:pointer;
+  background:linear-gradient(135deg,var(--frost),var(--ice));color:#062033;
+  box-shadow:0 4px 16px rgba(168,216,234,.22);
+  transition:transform .1s ease,box-shadow .2s ease;
+}
+.btn:hover{box-shadow:0 6px 22px rgba(168,216,234,.34)}
+.btn:active{transform:translateY(1px)}
+input:focus-visible,button:focus-visible{outline:2px solid var(--ice);outline-offset:3px}
+.microcopy{font-size:13px;color:var(--muted);margin-top:11px}
+.trustrow{
+  margin-top:8px;font-size:13.5px;font-weight:400;color:var(--muted);
+}
+.close .trustrow{text-align:center}
+.formnote{margin-top:11px;font-size:15px;font-weight:600;display:none}
+.formnote.ok{color:var(--green);display:block}
+.formnote.err{color:var(--danger);display:block}
+
+/* ---------- sections ---------- */
+section{padding:clamp(44px,6.5vw,84px) 0}
+.sec-head{max-width:56ch}
+.sec-head h2{margin-top:13px}
+.sec-head p{color:var(--muted);margin-top:15px;font-size:17.5px}
+
+/* ---------- SIGNATURE: the core sample ---------- */
+.core{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:rgba(8,26,42,.5)}
+.core-grid{display:grid;grid-template-columns:.95fr 1.05fr;gap:clamp(28px,5vw,58px);align-items:center}
+.strata{border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--deep2)}
+.stratum{
+  display:grid;grid-template-columns:64px 1fr auto;align-items:center;gap:14px;
+  padding:15px 17px;border-bottom:1px solid rgba(29,72,101,.7);
+  border-left:4px solid transparent;
+}
+.stratum:last-child{border-bottom:0}
+.stratum .depth{
+  font-family:var(--display);font-weight:900;font-size:21px;letter-spacing:-.02em;
+  color:var(--muted);
+}
+.stratum .what{font-weight:600;font-size:16px}
+.stratum .what small{display:block;font-weight:400;font-size:13px;color:var(--muted);margin-top:2px}
+.badge{
+  font-size:12px;font-weight:700;padding:5px 10px;border-radius:20px;white-space:nowrap;
+  background:rgba(127,168,196,.14);color:var(--muted);
+}
+.stratum.warn{border-left-color:var(--warn)}
+.stratum.warn .depth{color:var(--warn)}
+.stratum.warn .badge{background:rgba(255,155,84,.16);color:var(--warn)}
+.stratum.bad{border-left-color:var(--danger);background:rgba(255,77,109,.05)}
+.stratum.bad .depth{color:var(--danger)}
+.stratum.bad .badge{background:rgba(255,77,109,.16);color:var(--danger)}
+.stratum.unknown .what{color:var(--muted)}
+.stratum.unknown .depth{color:var(--danger)}
+
+/* ---------- facts ---------- */
+.facts{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(18px,3vw,38px);margin-top:40px}
+.fact .n{font-family:var(--display);font-weight:900;font-size:clamp(28px,3.4vw,40px);letter-spacing:-.02em;line-height:1}
+.fact .n span{color:var(--warn)}
+.fact p{margin-top:9px;font-size:15px;color:var(--muted);max-width:30ch}
+
+/* ---------- how ---------- */
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:40px}
+.card{
+  background:var(--card);border:1px solid var(--line);border-radius:18px;
+  padding:24px 22px 26px;
+}
+.card .kicker{font-size:11.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--ice-deep)}
+.card h3{margin:11px 0 9px}
+.card p{font-size:15.5px;color:var(--muted)}
+
+/* ---------- shots ---------- */
+.shots{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:42px}
+.shots figure{margin:0}
+.shots .phone{max-width:100%}
+.shots figcaption{margin-top:13px;text-align:center;font-size:14px;color:var(--muted)}
+
+/* ---------- the deal ---------- */
+.deal{border-top:1px solid var(--line);background:rgba(8,26,42,.5)}
+.deal-grid{display:grid;grid-template-columns:.9fr 1.1fr;gap:clamp(28px,5vw,58px);align-items:start}
+.terms{list-style:none;border-top:1px solid var(--line)}
+.terms li{display:grid;grid-template-columns:140px 1fr;gap:18px;padding:17px 0;border-bottom:1px solid var(--line)}
+.terms .k{font-size:11.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ice-deep);padding-top:4px}
+.terms .v{font-size:16.5px}
+.terms .v b{font-weight:700}
+.caveat{margin-top:24px;padding:18px 20px;background:rgba(255,155,84,.07);
+  border:1px solid rgba(255,155,84,.28);border-radius:14px;font-size:15.5px;color:var(--muted)}
+.caveat b{display:block;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--warn);margin-bottom:7px}
+
+/* ---------- close ---------- */
+.close{text-align:center;border-top:1px solid var(--line)}
+.close h2{margin:14px auto 0;max-width:18ch}
+.close .lede{margin:16px auto 0;text-align:center}
+.close .capture{margin:26px auto 0}
+.close .microcopy{text-align:center}
+footer{padding:0 0 40px;font-size:13px;color:#54748c}
+footer .wrap{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;
+  border-top:1px solid var(--line);padding-top:20px}
+
+/* ---------- responsive ---------- */
+@media (min-width:1500px){
+  :root{--wrap:1180px}
+  .hero{padding:clamp(38px,4.4vw,64px) 0 clamp(34px,4vw,54px)}
+}
+@media (max-width:900px){
+  .hero-grid,.core-grid,.deal-grid{grid-template-columns:1fr;gap:26px}
+  .hero-art{order:2}                 /* copy and form first, phone after */
+  .hero{padding-top:24px}
+  .hero .phone img{max-height:52vh}
+  body{padding-bottom:78px}          /* clear the sticky bar */
+  .cards,.facts{grid-template-columns:1fr;gap:16px}
+  .shots{grid-template-columns:1fr;max-width:300px;margin-left:auto;margin-right:auto}
+  .terms li{grid-template-columns:1fr;gap:5px}
+}
+
+/* ---------- sticky mobile CTA ---------- */
+.stickybar{
+  position:fixed;left:0;right:0;bottom:0;z-index:50;display:none;
+  padding:11px 16px calc(11px + env(safe-area-inset-bottom));
+  background:rgba(8,22,36,.94);backdrop-filter:blur(10px);
+  border-top:1px solid var(--line);
+}
+.stickybar button{
+  width:100%;font-family:var(--body);font-weight:700;font-size:16.5px;
+  padding:14px;border:0;border-radius:13px;cursor:pointer;
+  background:linear-gradient(135deg,var(--frost),var(--ice));color:#062033;
+}
+.stickybar small{display:block;text-align:center;color:var(--muted);font-size:12px;margin-top:7px}
+@media (max-width:900px){ .stickybar{display:block} }
+.stickybar.hide{transform:translateY(120%);transition:transform .25s ease}
+.stickybar{transition:transform .25s ease}
+
+/* ---------- motion ---------- */
+.rise{opacity:0;transform:translateY(15px);transition:opacity .6s ease,transform .6s ease}
+.rise.in{opacity:1;transform:none}
+.stratum{opacity:0;transform:translateY(-9px);transition:opacity .5s ease,transform .5s ease}
+.stratum.in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none!important;animation:none!important}
+  .rise,.stratum{opacity:1!important;transform:none!important}
+  html{scroll-behavior:auto}
+}
+</style>
+</head>
+<body>
+<div class="icebg"></div>
+
+<div class="bar">
+  <div class="wrap">
+    <div class="logo">Deep&nbsp;Freeze</div>
+    <div class="tag"><b>$15</b> once · no subscription</div>
+  </div>
+</div>
+
+<!-- ================= HERO ================= -->
+<div class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="eyebrow" id="eyebrow">No subscription · No ads · All yours</div>
+      <h1 id="headline">There's <em>$800</em> in your garage freezer. Name five things.</h1>
+      <p class="lede" id="subhead">Half a cow doesn't fit in your head. Deep Freeze is a freezer inventory that lives on your phone — log it when it goes in, know what's left before you shop.</p>
+
+      <form class="capture" id="signup" novalidate>
+        <div class="field-row">
+          <input type="email" id="email" placeholder="you@email.com" autocomplete="email" aria-label="Email address" required>
+          <button class="btn" type="submit">Sign up free</button>
+        </div>
+        <p class="microcopy">Signing up is free — this is the waitlist, not the purchase. I'll send <b>one</b> email the day it's ready and nothing before it.</p>
+        <p class="trustrow">Your address stays with me — never sold, never shared, never added to a list.</p>
+        <p class="formnote" id="formnote" role="status" aria-live="polite"></p>
+      </form>
+    </div>
+
+    <div class="hero-art">
+      <div class="phone"><img src="shot-1.jpg" loading="lazy" decoding="async" alt="Deep Freeze on a phone, showing the garage freezer at 20% free with 18 items and 5 flagged to use soon." width="600" height="1305"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= SIGNATURE: CORE SAMPLE ================= -->
+<div class="core">
+  <section>
+    <div class="wrap core-grid">
+      <div class="sec-head rise">
+        <div class="eyebrow">The problem, in one column</div>
+        <h2>A full freezer is a core sample.</h2>
+        <p>Everything you buy goes on top of everything you forgot. The good stuff sinks, and that bottom layer is where the money quietly goes bad.</p>
+      </div>
+      <div class="strata" aria-label="Cross-section of a freezer from newest at top to oldest at bottom">
+        <div class="stratum" data-i="0">
+          <div class="depth">0mo</div>
+          <div class="what">Sourdough, blueberries<small>Whatever went in this week</small></div>
+          <div class="badge">Fresh</div>
+        </div>
+        <div class="stratum" data-i="1">
+          <div class="depth">4mo</div>
+          <div class="what">Ground beef 80/20 · 11 packs<small>Half share, March</small></div>
+          <div class="badge">Fine</div>
+        </div>
+        <div class="stratum warn" data-i="2">
+          <div class="depth">5mo</div>
+          <div class="what">Brisket flat<small>Trimmed, for the smoker</small></div>
+          <div class="badge">Soon</div>
+        </div>
+        <div class="stratum bad" data-i="3">
+          <div class="depth">10mo</div>
+          <div class="what">Venison backstrap<small>Kyle's deer</small></div>
+          <div class="badge">Use now</div>
+        </div>
+        <div class="stratum bad unknown" data-i="4">
+          <div class="depth">?</div>
+          <div class="what">Something wrapped in white paper<small>No label, no date, bottom corner</small></div>
+          <div class="badge">Unknown</div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ================= FACTS ================= -->
+<section>
+  <div class="wrap">
+    <div class="sec-head rise">
+      <div class="eyebrow">Why it's worth ten seconds</div>
+      <h2>The freezer is the most expensive drawer in the house.</h2>
+    </div>
+    <div class="facts">
+      <div class="fact rise">
+        <div class="n">~<span>$1,200</span></div>
+        <p>What a quarter to half beef share runs before it ever reaches your freezer.</p>
+      </div>
+      <div class="fact rise">
+        <div class="n"><span>6–12</span> mo</div>
+        <p>How long vacuum-sealed meat holds its quality. After that you're rolling dice.</p>
+      </div>
+      <div class="fact rise">
+        <div class="n"><span>$0</span> /month</div>
+        <p>Nothing renews and nothing expires. Pay once and it keeps working.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= HOW ================= -->
+<section>
+  <div class="wrap">
+    <div class="sec-head rise">
+      <div class="eyebrow">How it works</div>
+      <h2>Ten seconds at the sealer. Nothing after that.</h2>
+      <p>A notebook taped to the lid works right up until you're standing in the store. Same list, except it's in your pocket — and it tells you what's getting old instead of waiting for you to notice.</p>
+    </div>
+    <div class="cards">
+      <div class="card rise">
+        <div class="kicker">At the sealer</div>
+        <h3>Log it while your hands are already cold</h3>
+        <p>Name, count, weight per pack, which freezer. Four taps while the sealer runs, and you never have to think about it again.</p>
+      </div>
+      <div class="card rise">
+        <div class="kicker">Months later</div>
+        <h3>It tells you what to cook first</h3>
+        <p>Every item ages against a real shelf life for what it is. When something has been in too long it turns red and climbs to the top of the list.</p>
+      </div>
+      <div class="card rise">
+        <div class="kicker">However many you have</div>
+        <h3>Two freezers, or five</h3>
+        <p>The kitchen one, the garage one, the chest out at the lake. Each one tracked on its own, switched with one tap. Set up as many as you need — the price is the same either way.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= SHOTS ================= -->
+<section>
+  <div class="wrap">
+    <div class="sec-head rise">
+      <div class="eyebrow">A look at it</div>
+      <h2>Built for the freezers you can't see into.</h2>
+    </div>
+    <div class="shots">
+      <figure class="rise">
+        <div class="phone"><img src="shot-1.jpg" loading="lazy" decoding="async" alt="Dashboard showing available capacity and a count of items needing use soon." width="600" height="1305" loading="lazy"></div>
+        <figcaption>What's in there, and how full</figcaption>
+      </figure>
+      <figure class="rise">
+        <div class="phone"><img src="shot-2.jpg" loading="lazy" decoding="async" alt="Inventory list sorted oldest first, with venison and beef flagged use now." width="600" height="1305" loading="lazy"></div>
+        <figcaption>Oldest first, flagged in red</figcaption>
+      </figure>
+      <figure class="rise">
+        <div class="phone"><img src="shot-3.jpg" loading="lazy" decoding="async" alt="Add to freezer form with name, count, weight, date, freezer and category." width="600" height="1305" loading="lazy"></div>
+        <figcaption>Adding takes seconds</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ================= THE DEAL ================= -->
+<div class="deal">
+  <section>
+    <div class="wrap deal-grid">
+      <div class="sec-head rise">
+        <div class="eyebrow">The deal</div>
+        <h2>Buy it once. It's yours.</h2>
+        <p>One payment, and the app is yours. No card on file quietly renewing every month, and no ads paying for it instead.</p>
+      </div>
+      <div class="rise">
+        <ul class="terms">
+          <li><span class="k">Price</span><span class="v"><b>$15, one time.</b> Not $4 a month. Not $60 for a "lifetime" unlock.</span></li>
+          <li><span class="k">Install</span><span class="v">Add it to your home screen from the browser. No app store, no permissions.</span></li>
+          <li><span class="k">Your data</span><span class="v">Yours. Export the whole list to a spreadsheet whenever you want. Never sold, never fed to advertisers.</span></li>
+          <li><span class="k">Freezers</span><span class="v">As many as you've got. Set them up when you start, add another whenever you buy one. <b>No per-freezer charge, ever.</b></span></li>
+          <li><span class="k">Updates</span><span class="v">Included, and they just appear. Nothing to download, no version to keep up with.</span></li>
+          <li><span class="k">Made in</span><span class="v">Texas. Designed and built here by someone who needed to track what was in his family's freezers.</span></li>
+        </ul>
+        <div class="caveat">
+          <b>The honest catch</b>
+          This is a web app you add to your home screen, not an App Store download. Most people find that takes about twenty seconds. If you specifically want an icon that came from the App Store, this isn't that.
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ================= CLOSE ================= -->
+<div class="close">
+  <section>
+    <div class="wrap">
+      <div class="eyebrow">Early access</div>
+      <h2 id="closing-head">Go look in the freezer. I'll wait.</h2>
+      <p class="lede" id="closing-sub">If you couldn't name what's on the bottom, leave your email. One message when it's ready.</p>
+      <form class="capture" id="signup2" novalidate>
+        <div class="field-row">
+          <input type="email" id="email2" placeholder="you@email.com" autocomplete="email" aria-label="Email address" required>
+          <button class="btn" type="submit">Sign up free</button>
+        </div>
+        <p class="microcopy">Signing up is free. One email the day it's ready, then nothing.</p>
+        <p class="trustrow">Your address stays with me — never sold, never shared, never added to a list.</p>
+        <p class="formnote" id="formnote2" role="status" aria-live="polite"></p>
+      </form>
+    </div>
+  </section>
+</div>
+
+<div class="stickybar" id="stickybar">
+  <button type="button" id="stickybtn">Sign up free for early access</button>
+  <small>One email when it's ready. Your address is never shared.</small>
+</div>
+
+<footer>
+  <div class="wrap">
+    <span>Deep Freeze</span>
+    <span>Proudly designed and built in Texas, United States</span>
+  </div>
+</footer>
+
+<script>
+/* ==========================================================
+   1. SET THIS before spending a dollar on ads.
+      Formspree: formspree.io -> new form -> copy endpoint.
+      Left blank, the form fakes success and captures NOTHING.
+   ========================================================== */
+const FORM_ENDPOINT = "https://formspree.io/f/myeyybaw";
+
+/* ==========================================================
+   2. AD VARIANTS.  Creative A -> ?v=bulk   Creative B -> ?v=hunter
+      The variant is submitted with the email, so your list
+      tells you which audience actually converted.
+   ========================================================== */
+const VARIANTS = {
+  bulk: {
+    eyebrow: "No subscription · No ads · All yours",
+    headline: 'There\'s <em>$800</em> in your garage freezer. Name five things.',
+    subhead: "Half a cow doesn't fit in your head. Deep Freeze is a freezer inventory that lives on your phone — log it when it goes in, know what's left before you shop.",
+    closingHead: "Go look in the freezer. I'll wait.",
+    closingSub: "If you couldn't name what's on the bottom, leave your email. One message when it's ready."
+  },
+  smoke: {
+    eyebrow: "No subscription · No ads · All yours",
+    headline: 'You froze half that <em>brisket</em>. When?',
+    subhead: "Packers, pork butts, the ribs you got on sale. A freezer inventory that lives on your phone — log it when it goes in, and know what's down there before you light the smoker.",
+    closingHead: "Go look in the deep freeze. I'll wait.",
+    closingSub: "If you couldn't name what's on the bottom, leave your email. One message when it's ready."
+  },
+  hunter: {
+    eyebrow: "No subscription · No ads · All yours",
+    headline: 'You filled that freezer <em>months ago</em>. What\'s left?',
+    subhead: "Venison, half a hog, the packers you bought on sale. A freezer inventory for people who fill one on purpose — log it at the sealer, and know what's down there before you thaw the wrong thing.",
+    closingHead: "What's on the bottom of that freezer?",
+    closingSub: "If you had to think about it, leave your email. One message when it's ready."
+  }
+};
+
+const params = new URLSearchParams(location.search);
+const key = (params.get("v") || "bulk").toLowerCase();
+const V = VARIANTS[key] || VARIANTS.bulk;
+const variantName = VARIANTS[key] ? key : "bulk";
+
+document.getElementById("eyebrow").innerHTML = V.eyebrow;
+document.getElementById("headline").innerHTML = V.headline;
+document.getElementById("subhead").textContent = V.subhead;
+document.getElementById("closing-head").textContent = V.closingHead;
+document.getElementById("closing-sub").textContent = V.closingSub;
+
+/* ---------- form ---------- */
+function wire(formId, inputId, noteId){
+  const form=document.getElementById(formId);
+  const input=document.getElementById(inputId);
+  const note=document.getElementById(noteId);
+
+  form.addEventListener("submit", async function(e){
+    e.preventDefault();
+    const email=input.value.trim();
+    note.className="formnote"; note.textContent="";
+
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+      note.className="formnote err";
+      note.textContent="That email doesn't look right. Check it and try again.";
+      input.focus(); return;
+    }
+
+    const btn=form.querySelector("button");
+    const label=btn.textContent;
+    btn.textContent="Sending…"; btn.disabled=true;
+
+    try{
+      if(FORM_ENDPOINT){
+        const res=await fetch(FORM_ENDPOINT,{
+          method:"POST",
+          headers:{"Content-Type":"application/json","Accept":"application/json"},
+          body:JSON.stringify({
+            email:email,
+            variant:variantName,
+            source:params.get("src")||"direct",
+            page:location.pathname
+          })
+        });
+        if(!res.ok) throw new Error("bad response");
+      } else {
+        await new Promise(r=>setTimeout(r,400)); // demo mode — captures nothing
+      }
+      note.className="formnote ok";
+      note.textContent="You're on the list. I'll email you once — when it's ready.";
+      form.querySelector(".field-row").style.display="none";
+    }catch(err){
+      note.className="formnote err";
+      note.textContent="That didn't go through. Try again in a second.";
+      btn.textContent=label; btn.disabled=false;
+    }
+  });
+}
+(function(){
+  var bar=document.getElementById("stickybar");
+  var btn=document.getElementById("stickybtn");
+  if(!bar||!btn) return;
+  btn.addEventListener("click",function(){
+    var f=document.getElementById("email");
+    f.scrollIntoView({behavior:"smooth",block:"center"});
+    setTimeout(function(){ f.focus({preventScroll:true}); },420);
+  });
+  // don't cover the form when the form is already visible
+  if("IntersectionObserver" in window){
+    var io=new IntersectionObserver(function(es){
+      es.forEach(function(e){ bar.classList.toggle("hide", e.isIntersecting); });
+    },{threshold:.35});
+    document.querySelectorAll(".capture").forEach(function(el){ io.observe(el); });
+  }
+})();
+
+wire("signup","email","formnote");
+wire("signup2","email2","formnote2");
+
+/* ---------- motion ---------- */
+const reduce=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+if(reduce){
+  document.querySelectorAll(".rise,.stratum").forEach(e=>e.classList.add("in"));
+} else {
+  const io=new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if(!en.isIntersecting) return;
+      en.target.classList.add("in");
+      io.unobserve(en.target);
+    });
+  },{threshold:.12,rootMargin:"0px 0px -50px 0px"});
+
+  document.querySelectorAll(".rise").forEach(function(el,i){
+    el.style.transitionDelay=(i%3)*70+"ms";
+    io.observe(el);
+  });
+
+  // strata stack top-to-bottom when the core scrolls in
+  const coreIO=new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if(!en.isIntersecting) return;
+      document.querySelectorAll(".stratum").forEach(function(s){
+        setTimeout(function(){ s.classList.add("in"); }, 120 + (+s.dataset.i)*140);
+      });
+      coreIO.disconnect();
+    });
+  },{threshold:.2});
+  const strata=document.querySelector(".strata");
+  if(strata) coreIO.observe(strata);
+}
+</script>
+
+<!-- ===========================================================
+     ANALYTICS  —  paste your Cloudflare Web Analytics token below.
+     cloudflare.com -> Web Analytics -> Add a site -> copy the token.
+     Free, no cookie banner needed, works without moving your DNS.
+     Leave blank and nothing is sent.
+     =========================================================== -->
+<script>
+(function(){
+  var CF_TOKEN = "a13ab075417b4e228e262dac32b7feca";
+
+  if (CF_TOKEN) {
+    var b = document.createElement("script");
+    b.type = "module";
+    b.src = "https://static.cloudflareinsights.com/beacon.min.js";
+    b.setAttribute("data-cf-beacon", JSON.stringify({ token: CF_TOKEN }));
+    document.head.appendChild(b);
+  }
+
+  /* Funnel checkpoints. Without these you can see visits but not where
+     people fall out. Each fires once and is visible in the console with
+     ?debug=1 on the URL. */
+  var fired = {};
+  var debug = new URLSearchParams(location.search).has("debug");
+  function mark(name){
+    if (fired[name]) return;
+    fired[name] = true;
+    if (debug) console.log("[funnel]", name);
+    if (window.__cfBeacon || CF_TOKEN) {
+      try { navigator.sendBeacon && navigator.sendBeacon(
+        "https://static.cloudflareinsights.com/beacon.min.js?event=" +
+        encodeURIComponent(name)); } catch(e){}
+    }
+  }
+
+  mark("page_view");
+
+  // did the email field ever reach the screen?
+  if ("IntersectionObserver" in window) {
+    var f = document.querySelector(".capture");
+    if (f) {
+      var io = new IntersectionObserver(function(es){
+        es.forEach(function(e){ if (e.isIntersecting) { mark("form_seen"); io.disconnect(); } });
+      }, { threshold: .5 });
+      io.observe(f);
+    }
+  }
+
+  // did they engage with it?
+  document.addEventListener("focusin", function(e){
+    if (e.target && e.target.type === "email") mark("form_focus");
+  });
+  document.addEventListener("submit", function(){ mark("form_submit"); }, true);
+
+  // how far down did they get?
+  var depths = [25, 50, 75];
+  window.addEventListener("scroll", function(){
+    var h = document.documentElement;
+    var pct = (h.scrollTop + window.innerHeight) / h.scrollHeight * 100;
+    depths.forEach(function(d){ if (pct >= d) mark("scroll_" + d); });
+  }, { passive: true });
+})();
+</script>
+</body>
+</html>
